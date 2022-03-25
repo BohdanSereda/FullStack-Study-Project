@@ -1,11 +1,31 @@
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
+import 'dotenv/config'
 import User from '../models/User.js'
 
-const login = (req, res) =>{
-    const userData = {
-      login: req.body
+const login = async (req, res) =>{
+    const existingUser = await  User.findOne({email: req.body.email})
+    if(existingUser){
+        const passwordResult = bcrypt.compareSync(req.body.password, existingUser.password)
+        if(passwordResult){
+            const token = jwt.sign({
+                email: existingUser.email,
+                userID: existingUser._id
+            },process.env.JWT, {expiresIn: 3600})
+            res.status(200).json({
+                token: `Bearer ${token}`
+            })
+        }else{
+            res.status(401).json({
+                message: 'Error: passwords do not match'
+            })
+        }
     }
-    res.status(200).json(userData)
+    else{
+        res.status(404).json({
+            message: 'Error: email not found'
+        })
+    }
 }
 const  register = async (req, res)=>{
     const existingUser = await  User.findOne({email: req.body.email})
